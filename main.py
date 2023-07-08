@@ -1,8 +1,6 @@
 import os
 import sys
 
-CONFIG = open('config.txt','r')
-FFMPEG = CONFIG.readline()[13:-1]
 
 def pause():
     if sys.platform=='win32':
@@ -32,10 +30,27 @@ def clear(_path):
         if i.endswith(".scaled.mp4"):
             os.system(rf'del "{_path}\{i}"')
 
+
 if __name__ == "__main__":
+    if os.path.exists('config.txt'):
+        CONFIG = open('config.txt','r')
+        FFMPEG = CONFIG.readline()[13:-1]
+        first_startup = 0
+    
+    else:
+        CONFIG = open('config.txt','w')
+        FFMPEG = input("Locate the FFMPEG: ")
+        first_startup = 1
+
+        
     action = input("action: ")
     check('action ',action == 'convert' or action == 'clear')
-    isdefaut = input("Do you want to use config options?[y/N]: ")
+    if first_startup == 0:
+        isdefaut = input("Do you want to use config options?[y/N]: ")
+
+    else:
+        isdefaut = 'N'
+        
     if action == 'convert':
         
         if isdefaut == 'y':
@@ -52,15 +67,23 @@ if __name__ == "__main__":
            
         elif isdefaut == "N":
             path = input("path: ")
-            check(os.path.exists(path))
+            check('path ',os.path.exists(path))
             
             width = input("width: ")
-            check(str.isdigit(width) and int(width) > 0)
+            check('width ',str.isdigit(width) and int(width) > 0)
     
             height = input("height: ")
-            check(str.isdigit(height) and int(height) > 0)
+            check('height ',str.isdigit(height) and int(height) > 0)
     
             bitrate = input('bitrate: ')
+
+            if first_startup == 1:
+                CONFIG.write(f'''ffmpeg path: {FFMPEG}
+path: {path}
+width: {width}
+height: {height}
+bitrate: {bitrate}''')
+                CONFIG.close()
 
         (convert if os.path.isfile(path) else convert_dir)(
             path, width, height, bitrate
@@ -74,5 +97,6 @@ if __name__ == "__main__":
             path = input("path: ")
         clear(path)
 
-#23w0627b:
-#FIXED THE BUG WHICH MADE ACTION "CLEAR" UNAVAILABLE
+
+#23w0628a:
+#加入了首次启动生成配置文件
