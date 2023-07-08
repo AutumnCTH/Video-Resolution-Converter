@@ -13,6 +13,9 @@ def end(code):
 def check(a,b):
     if not b:
         print(a +'invalid!', file=sys.stderr)
+        if first_startup == 1:
+            CONFIG.close()
+            os.system("del config.txt")
         end(1)
 
 def convert(_path, _width, _height, _bitrate):
@@ -34,28 +37,33 @@ def clear(_path):
 if __name__ == "__main__":
     if os.path.exists('config.txt'):
         CONFIG = open('config.txt','r')
-        FFMPEG = CONFIG.readline()[13:-1]
         first_startup = 0
     
     else:
         CONFIG = open('config.txt','w')
-        FFMPEG = input("Locate the FFMPEG: ")
         first_startup = 1
 
         
     action = input("action: ")
-    check('action ',action == 'convert' or action == 'clear')
-    if first_startup == 0:
+    check('action ',action == 'convert' or action == 'clear' or action == "config")
+    if first_startup == 0 and action == 'convert' or action == 'clear':
         isdefaut = input("Do you want to use config options?[y/N]: ")
 
     else:
         isdefaut = 'N'
         
     if action == 'convert':
+        if first_startup == 1:
+            FFMPEG = input("Locate the FFMPEG: ")
+            check('FFMPEG ', os.path.exists(fr"{FFMPEG}"))
+            
+        else:
+            FFMPEG = CONFIG.readline()[13:-1]
+            check('FFMPEG ', os.path.exists(fr"{FFMPEG}"))
         
         if isdefaut == 'y':
             path = CONFIG.readline()[6:-1]
-            check('path ',os.path.exists(path))
+            check('path ',os.path.exists(fr'{path}'))
             
             width = CONFIG.readline()[7:-1]
             check('width ',str.isdigit(width) and int(width) > 0)
@@ -65,9 +73,11 @@ if __name__ == "__main__":
     
             bitrate = CONFIG.readline()[9:-1]
            
+            
         elif isdefaut == "N":
+            
             path = input("path: ")
-            check('path ',os.path.exists(path))
+            check('path ',os.path.exists(fr'{path}'))
             
             width = input("width: ")
             check('width ',str.isdigit(width) and int(width) > 0)
@@ -80,23 +90,46 @@ if __name__ == "__main__":
             if first_startup == 1:
                 CONFIG.write(f'''ffmpeg path: {FFMPEG}
 path: {path}
-width: {width}
-height: {height}
-bitrate: {bitrate}''')
+width: 640
+height: 360
+bitrate: 1024k''')
                 CONFIG.close()
 
-        (convert if os.path.isfile(path) else convert_dir)(
-            path, width, height, bitrate
-        )
+
+        if os.path.isfile(fr'{path}'):
+            convert(fr'{path}',fr'{width}', fr'{height}', fr'{bitrate}')
+            
+        else:
+            convert_dir(fr'{path}',fr'{width}', fr'{height}', fr'{bitrate}')
         
-    elif action=='clear':
+        
+    elif action == 'clear':
         if isdefaut == 'y':
             path = CONFIG.readline()[6:-1]
+            check('path ',os.path.exists(fr'{path}'))
             
         elif isdefaut == 'N':
             path = input("path: ")
+            check('path ',os.path.exists(fr'{path}'))
+            
         clear(path)
+        
+        
+    elif action == "config":
+        CONFIG.close()
+        os.system("del config.txt")
+        CONFIG = open('config.txt','w')
+        CONFIG.write('''ffmpeg path: 
+path: 
+width: 640
+height: 360
+bitrate: 1024k''')
+        CONFIG.close()
 
 
-#23w0628a:
-#加入了首次启动生成配置文件
+#1.3.0.230705a:
+#1.加入了手动生成config的action
+#2.首次启动后如果invalid会删除config.txt
+#3."locate the FFMPEG"只会在action为convert时出现
+#4.加入了检查FFMPEG路径的功能
+#5.修复了正确路径误报错的bug
