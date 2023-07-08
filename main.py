@@ -1,4 +1,4 @@
-import os.path
+import os
 import sys
 
 from ruamel import yaml
@@ -32,6 +32,8 @@ def parse_config(path='config.yml'):
             'check': lambda _: (_ and str.isdigit(str(_))) and int(_) > 0,
         },
     }
+
+    _config = {}
 
     # 打开配置文件.
     try:
@@ -69,8 +71,8 @@ def parse_config(path='config.yml'):
 
 
 def convert(ffmpeg_path, path, width, height, bitrate):
-    print(
-        r'{} -i {} -b:v {} -s {}x{} "{}"'.format(
+    os.system(
+        r'{} -i "{}" -b:v {} -s {}x{} "{}.scale.mp4"'.format(
             ffmpeg_path,
             path,
             bitrate,
