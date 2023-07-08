@@ -1,152 +1,109 @@
-import os
+import os.path
 import sys
 
-
-def pause():
-    if sys.platform == "win32":
-        os.system("pause")
+from ruamel import yaml
 
 
-def end(code):
-    pause()
-    exit(code)
+def parse_config(path='config.yml'):
+    _CONFIG_DATA = {
+        'ffmpeg_path': {
+            'input_msg': '''Input the location of ffmpeg''',
+            'err_msg': '''Invalid path!''',
+            'check': lambda _: os.path.exists(_) and os.path.isfile(_),
+        },
+        'path': {
+            'input_msg': '''Input the path of the source media file or direction''',
+            'err_msg': '''Invalid path!''',
+            'check': lambda _: os.path.exists(_),
+        },
+        'bitrate': {
+            'input_msg': '''Input the target bitrate''',
+            'err_msg': '''Invalid bitrate!''',
+            'check': lambda _: _ and str(_)[-1] in 'kmg' and str.isdigit(_[:-1]) and int(_[:-1]) > 0
+        },
+        'width': {
+            'input_msg': '''Input the target width''',
+            'err_msg': '''Invalid width!''',
+            'check': lambda _: (_ and str.isdigit(str(_))) and int(_) > 0,
+        },
+        'height': {
+            'input_msg': '''Input the target height''',
+            'err_msg': '''Invalid height!''',
+            'check': lambda _: (_ and str.isdigit(str(_))) and int(_) > 0,
+        },
+    }
+
+    # 打开配置文件.
+    try:
+        with open(path, encoding='UTF-8') as _file:
+            _config = yaml.safe_load(_file)
+            _file.close()
+    except IOError as error:
+        print(error, file=sys.stderr)
+
+    _edited = False
+    for _k in _CONFIG_DATA:
+        while True:
+            _v = input(
+                _CONFIG_DATA[_k]['input_msg'] +
+                (
+                    f''' (default: {_config[_k]})''' if
+                    _config.get(_k) and _CONFIG_DATA[_k]['check'](_config.get(_k)) else
+                    ''
+                ) +
+                ''': '''
+            )
+            if not _v and _config.get(_k) and _CONFIG_DATA[_k]['check'](_config.get(_k)):
+                break
+            if not _CONFIG_DATA[_k]['check'](_v):
+                print(_CONFIG_DATA[_k]['err_msg'], file=sys.stderr)
+            else:
+                _edited = True
+                _config[_k] = _v
+                break
+
+    for _k in ['width', 'height']:
+        _config[_k] = int(_config[_k])
+
+    return _config, _edited
 
 
-def check(a, b):
-    if not b:
-        print(a + "invalid!", file=sys.stderr)
-        if first_startup == 1:
-            CONFIG.close()
-            os.system("del config.txt")
-        end(1)
-
-
-def convert(_path, _width, _height, _bitrate):
-    os.system(
-        rf'{FFMPEG} -i "{_path}" -b:v {_bitrate} -s {_width}x{_height} "{_path[:-4] + ".scaled.mp4"}"'
+def convert(ffmpeg_path, path, width, height, bitrate):
+    print(
+        r'{} -i {} -b:v {} -s {}x{} "{}"'.format(
+            ffmpeg_path,
+            path,
+            bitrate,
+            width,
+            height,
+            os.path.splitext(path)[0],
+        ),
     )
 
 
-def convert_dir(_path, _width, _height, _bitrate):
-    for _ in os.listdir(_path):
-        if _.endswith(".mp4") and not _.endswith(".scaled.mp4"):
-            convert(_path + "\\" + _, _width, _height, _bitrate)
+def write(config, path='config.yml'):
+    _file = open(path, 'w', encoding='UTF-8')
+    yaml.dump(config, _file, Dumper=yaml.RoundTripDumper)
+    _file.close()
 
 
-def clear(_path):
-    for i in os.listdir(_path):
-        if i.endswith(".scaled.mp4"):
-            os.system(rf'del "{_path}\{i}"')
+def main():
+    _config, _edited = parse_config()
+
+    convert(*[
+        _config[_k]
+        for _k in ['ffmpeg_path', 'path', 'width', 'height', 'bitrate']
+    ])
+
+    if _edited:
+        while True:
+            _c = input('Update the config file? (y/N)')
+            if not _c or _c in 'Nn':
+                break
+            elif _c in 'Yy':
+                write(_config)
+                break
 
 
-if __name__ == "__main__":
-    if os.path.exists("config.txt"):
-        CONFIG = open("config.txt", "r")
-        first_startup = 0
-
-    else:
-        CONFIG = open("config.txt", "w")
-        first_startup = 1
-
-    action = input("action[convert/clear/config/help]: ")
-    check(
-        "action ",
-        action == "convert"
-        or action == "clear"
-        or action == "config"
-        or action == "help",
-    )
-    if first_startup == 0 and action == "convert" or action == "clear":
-        isdefaut = input("Do you want to use config options?[y/N]: ")
-
-    else:
-        isdefaut = "N"
-
-    if action == "convert":
-        if first_startup == 1:
-            FFMPEG = input("Locate the FFMPEG: ")
-            check("FFMPEG ", os.path.exists(rf"{FFMPEG}"))
-
-        else:
-            FFMPEG = CONFIG.readline()[13:-1]
-            check("FFMPEG ", os.path.exists(rf"{FFMPEG}"))
-
-        if isdefaut == "y":
-            path = CONFIG.readline()[6:-1]
-            check("path ", os.path.exists(rf"{path}"))
-
-            width = CONFIG.readline()[7:-1]
-            check("width ", str.isdigit(width) and int(width) > 0)
-
-            height = CONFIG.readline()[8:-1]
-            check("height ", str.isdigit(height) and int(height) > 0)
-
-            bitrate = CONFIG.readline()[9:-1]
-            check("bitrate ", bitrate.endswith("k" or "m" or "g"))
-
-        elif isdefaut == "N":
-            path = input("path: ")
-            check("path ", os.path.exists(rf"{path}"))
-
-            width = input("width: ")
-            check("width ", str.isdigit(width) and int(width) > 0)
-
-            height = input("height: ")
-            check("height ", str.isdigit(height) and int(height) > 0)
-
-            bitrate = input("bitrate: ")
-            check("bitrate ", bitrate.endswith("k" or "m" or "g"))
-
-            if first_startup == 1:
-                CONFIG.write(
-                    f"""ffmpeg path: {FFMPEG}
-path: {path}
-width: 640
-height: 360
-bitrate: 1024k"""
-                )
-                CONFIG.close()
-
-        if os.path.isfile(rf"{path}"):
-            convert(rf"{path}", rf"{width}", rf"{height}", rf"{bitrate}")
-
-        else:
-            convert_dir(rf"{path}", rf"{width}", rf"{height}", rf"{bitrate}")
-
-    elif action == "clear":
-        if isdefaut == "y":
-            FFMPEG = CONFIG.readline()[13:-1]
-
-            path = CONFIG.readline()[6:-1]
-            check("path ", os.path.exists(rf"{path}"))
-
-        elif isdefaut == "N":
-            path = input("path: ")
-            check("path ", os.path.exists(rf"{path}"))
-
-        clear(path)
-
-    elif action == "config":
-        CONFIG.close()
-        os.system("del config.txt")
-        CONFIG = open("config.txt", "w")
-        CONFIG.write(
-            """ffmpeg path: 
-path: 
-width: 640
-height: 360
-bitrate: 1024k"""
-        )
-        CONFIG.close()
-
-    elif action == "help":
-        print(
-            """Actions Instruction:
-        convert    the main function
-        clear      clear the converted files
-        config     create a config file
-        help       show this list"""
-        )
-
-# 1.4.0.230707b
-# 1.加入了检查bitrate是否带有单位的功能
+if __name__ == '__main__':
+    main()
