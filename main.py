@@ -35,11 +35,13 @@ def clear(_path):
 if __name__ == "__main__":
     action = input("action: ")
     check('action ',action == 'convert' or action == 'clear')
-
+    isdefaut = input("Do you want to use config options?[y/N]: ")
     if action == 'convert':
-        isdefaut = input("Do you want to use config options?[y/N]: ")
         
         if isdefaut == 'y':
+            path = CONFIG.readline()[6:-1]
+            check('path ',os.path.exists(path))
+            
             width = CONFIG.readline()[7:-1]
             check('width ',str.isdigit(width) and int(width) > 0)
     
@@ -47,11 +49,11 @@ if __name__ == "__main__":
             check('height ',str.isdigit(height) and int(height) > 0)
     
             bitrate = CONFIG.readline()[9:-1]
-
-            path = CONFIG.readline()[6:-1]
-            check('path ',os.path.exists(path))
-            
+           
         elif isdefaut == "N":
+            path = input("path: ")
+            check(os.path.exists(path))
+            
             width = input("width: ")
             check(str.isdigit(width) and int(width) > 0)
     
@@ -60,13 +62,17 @@ if __name__ == "__main__":
     
             bitrate = input('bitrate: ')
 
-            path = input("path: ")
-            check(os.path.exists(path))
-
-    if action=='convert':
         (convert if os.path.isfile(path) else convert_dir)(
             path, width, height, bitrate
         )
         
     elif action=='clear':
+        if isdefaut == 'y':
+            path = CONFIG.readline()[6:-1]
+            
+        elif isdefaut == 'N':
+            path = input("path: ")
         clear(path)
+
+#23w0627b:
+#FIXED THE BUG WHICH MADE ACTION "CLEAR" UNAVAILABLE
