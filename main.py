@@ -105,6 +105,8 @@ bitrate: 1024k''')
         
     elif action == 'clear':
         if isdefaut == 'y':
+            FFMPEG = CONFIG.readline()[13:-1]
+            
             path = CONFIG.readline()[6:-1]
             check('path ',os.path.exists(fr'{path}'))
             
@@ -126,10 +128,5 @@ height: 360
 bitrate: 1024k''')
         CONFIG.close()
 
-
-#1.3.0.230705a:
-#1.加入了手动生成config的action
-#2.首次启动后如果invalid会删除config.txt
-#3."locate the FFMPEG"只会在action为convert时出现
-#4.加入了检查FFMPEG路径的功能
-#5.修复了正确路径误报错的bug
+#1.3.1.230707a:
+#1.修复了clear功能使用默认配置时，将path错误定位到FFMPEG行的问题
